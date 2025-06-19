@@ -1,6 +1,6 @@
 {
     "manifest_version": 3,
-    "name": "Ulterior Motives Detector",
+    "name": "Spinguard",
     "version": "1.0.0",
     "description": "Detect hidden agendas, bias, and ulterior motives on websites",
     "permissions": [

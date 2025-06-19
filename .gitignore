@@ -85,3 +85,5 @@ tmp/
 temp/ 
 
 notes.txt
+
+src/config.ts
