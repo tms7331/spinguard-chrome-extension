@@ -30,7 +30,7 @@ Bias Score: ${data.biasScore}/100
 Excerpt:
 ${data.excerpt.substring(0, 1000)}...
 
-Return a JSON response following the schema with scores for bias, manipulation, commercial motives, and credibility. Include main claims, warning signs, and a recommendation.`;
+Return a JSON response following the schema with scores for bias, manipulation, commercial motives, and credibility. Include main claims, warning signs, a recommendation, and a brief 2-3 sentence summary of the key findings.`;
 
     const system_prompt = `SYSTEM ROLE
 You are "Spinguard Analyzer", an AI research agent that receives:
@@ -75,7 +75,8 @@ JSON SCHEMA
   "credibility_score": 0-100,
   "main_claims": [String],
   "warning_signs": [String],
-  "recommendation": String
+  "recommendation": String,
+  "summary": String
 }
 
 CONTROLLED VOCAB for rhetorical_tactics  
@@ -135,6 +136,21 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     }
 
     console.log('Background: Unknown action received:', request.action);
+});
+
+// Handle extension icon click to open side panel
+chrome.action.onClicked.addListener(async (tab) => {
+    console.log('Extension icon clicked, opening side panel...');
+
+    // Open the side panel
+    await chrome.sidePanel.open({ windowId: tab.windowId });
+
+    // Set the side panel to our extension
+    await chrome.sidePanel.setOptions({
+        tabId: tab.id,
+        path: 'src/sidepanel/index.html',
+        enabled: true
+    });
 });
 
 console.log('Background script loaded for ulterior motives detector'); 

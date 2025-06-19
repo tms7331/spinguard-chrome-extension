@@ -1,17 +1,21 @@
-// Popup script for ulterior motives detector
+// Side panel script for Spinguard
 document.addEventListener('DOMContentLoaded', () => {
     const analyzeButton = document.getElementById('analyze');
-    const resultsDiv = document.createElement('div');
-    resultsDiv.id = 'results';
-    resultsDiv.style.marginTop = '20px';
-    document.body.appendChild(resultsDiv);
+    const resultsDiv = document.getElementById('results');
 
     if (analyzeButton) {
         analyzeButton.addEventListener('click', async () => {
             console.log('Analyze button clicked!');
 
             // Show loading state
-            resultsDiv.innerHTML = '<p>Analyzing page...</p>';
+            analyzeButton.disabled = true;
+            analyzeButton.textContent = 'Analyzing...';
+            resultsDiv.innerHTML = `
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Analyzing page for hidden motives and bias...</p>
+                </div>
+            `;
 
             try {
                 console.log('Step 1: Getting current tab...');
@@ -50,7 +54,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             function extractLinks() {
                                 const links = Array.from(document.querySelectorAll('a[href]'));
                                 const urls = links
-                                    .map(link => (link as HTMLAnchorElement).href)
+                                    .map(link => link.href)
                                     .filter(url => {
                                         try {
                                             const urlObj = new URL(url);
@@ -68,7 +72,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 const affiliatePatterns = [/amazon\.com.*ref=/, /go2cloud\.org/, /clickbank\.com/, /commission/, /affiliate/, /partner/, /sponsor/];
                                 const links = document.querySelectorAll('a[href]');
                                 links.forEach(link => {
-                                    const href = (link as HTMLAnchorElement).href;
+                                    const href = link.href;
                                     if (affiliatePatterns.some(pattern => pattern.test(href))) {
                                         indicators.push('Affiliate links detected');
                                     }
@@ -90,7 +94,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                             // Extract author information
                             function extractAuthor() {
-                                const authorMeta = document.querySelector('meta[name="author"]') as HTMLMetaElement;
+                                const authorMeta = document.querySelector('meta[name="author"]');
                                 if (authorMeta?.content) return authorMeta.content;
 
                                 const bylineSelectors = ['.author', '.byline', '[rel="author"]', '.post-author', '.article-author', '.writer'];
@@ -134,7 +138,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             };
 
                             // Store the data globally so the popup can access it
-                            (window as any).pageAnalysisData = pageData;
+                            window.pageAnalysisData = pageData;
                             console.log('Page analysis complete:', pageData);
                         }
                     });
@@ -148,7 +152,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     console.log('Step 6: Retrieving analysis data...');
                     const result = await chrome.scripting.executeScript({
                         target: { tabId: tab.id },
-                        func: () => (window as any).pageAnalysisData
+                        func: () => window.pageAnalysisData
                     });
 
                     pageData = result[0].result;
@@ -157,7 +161,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // Send data to background script for LLM analysis
                 console.log('Step 7: Sending data to background script for LLM analysis...');
-                resultsDiv.innerHTML = '<p>Getting AI analysis...</p>';
+                resultsDiv.innerHTML = `
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <p>Getting AI analysis...</p>
+                    </div>
+                `;
 
                 const llmResponse = await chrome.runtime.sendMessage({
                     action: 'sendToLLM',
@@ -180,21 +189,42 @@ document.addEventListener('DOMContentLoaded', () => {
                     } catch {
                         // If it's not JSON, treat it as the old format
                         resultsDiv.innerHTML = `
-                            <h3>Analysis Results</h3>
-                            <p><strong>URL:</strong> ${pageData.url}</p>
-                            <p><strong>Title:</strong> ${pageData.title}</p>
-                            <p><strong>Author:</strong> ${pageData.author || 'Unknown'}</p>
-                            <p><strong>Bias Score:</strong> ${pageData.biasScore}/100</p>
-                            <p><strong>Links Found:</strong> ${pageData.links.length}</p>
-                            <p><strong>Motive Indicators:</strong></p>
-                            <ul>
-                                ${pageData.motiveIndicators.length > 0
-                                ? pageData.motiveIndicators.map((indicator: string) => `<li>${indicator}</li>`).join('')
-                                : '<li>None detected</li>'
+                            <div class="results">
+                                <h3>Analysis Results</h3>
+                                <div class="basic-info">
+                                    <div class="info-item">
+                                        <strong>URL</strong>
+                                        <span>${pageData.url}</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <strong>Title</strong>
+                                        <span>${pageData.title}</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <strong>Author</strong>
+                                        <span>${pageData.author || 'Unknown'}</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <strong>Bias Score</strong>
+                                        <span>${pageData.biasScore}/100</span>
+                                    </div>
+                                </div>
+                                <div class="section">
+                                    <h3>🔗 Links Found</h3>
+                                    <p>${pageData.links.length} unique links detected</p>
+                                </div>
+                                <div class="section">
+                                    <h3>⚠️ Motive Indicators</h3>
+                                    ${pageData.motiveIndicators.length > 0
+                                ? `<ul>${pageData.motiveIndicators.map((indicator) => `<li>${indicator}</li>`).join('')}</ul>`
+                                : '<p>None detected</p>'
                             }
-                            </ul>
-                            <h4>AI Analysis:</h4>
-                            <p>${llmResponse.data}</p>
+                                </div>
+                                <div class="section">
+                                    <h3>🤖 AI Analysis</h3>
+                                    <p>${llmResponse.data}</p>
+                                </div>
+                            </div>
                         `;
                         console.log('Step 8 complete: Results displayed (legacy format)');
                         return;
@@ -203,70 +233,112 @@ document.addEventListener('DOMContentLoaded', () => {
                     analysisData = llmResponse.data;
                 }
 
-                // Display simplified structured results
-                const riskLevel = (score: number) => {
-                    if (score <= 1) return '🟢 Low';
-                    if (score <= 2) return '🟡 Moderate';
-                    if (score <= 3) return '🟠 High';
-                    return '🔴 Extreme';
+                // Display structured results with improved layout
+                const riskLevel = (score) => {
+                    if (score <= 20) return { class: 'risk-low', text: 'Low' };
+                    if (score <= 40) return { class: 'risk-moderate', text: 'Moderate' };
+                    if (score <= 60) return { class: 'risk-high', text: 'High' };
+                    return { class: 'risk-extreme', text: 'Extreme' };
                 };
 
+                const biasRisk = riskLevel(analysisData.bias_score || 0);
+                const manipulationRisk = riskLevel(analysisData.manipulation_score || 0);
+                const commercialRisk = riskLevel(analysisData.commercial_score || 0);
+                const credibilityRisk = riskLevel(analysisData.credibility_score || 0);
+
                 resultsDiv.innerHTML = `
-                    <h3>Spinguard Analysis</h3>
-                    
-                    ${analysisData.summary ? `
-                        <div style="margin-bottom: 15px; padding: 10px; background-color: #f5f5f5; border-radius: 5px;">
-                            <h4>🤖 AI Summary</h4>
-                            <p style="font-size: 14px; margin: 0;">${analysisData.summary}</p>
+                    <div class="results">
+                        ${analysisData.summary ? `
+                            <div class="summary-box">
+                                <h3>🤖 AI Summary</h3>
+                                <p>${analysisData.summary}</p>
+                            </div>
+                        ` : ''}
+                        
+                        <div class="section">
+                            <h3>📋 Basic Information</h3>
+                            <div class="basic-info">
+                                <div class="info-item">
+                                    <strong>Title</strong>
+                                    <span>${analysisData.title || pageData.title}</span>
+                                </div>
+                                <div class="info-item">
+                                    <strong>Author</strong>
+                                    <span>${analysisData.author || pageData.author || 'Unknown'}</span>
+                                </div>
+                            </div>
                         </div>
-                    ` : ''}
-                    
-                    <div style="margin-bottom: 15px;">
-                        <h4>📋 Basic Info</h4>
-                        <p><strong>Title:</strong> ${analysisData.title || pageData.title}</p>
-                        <p><strong>Author:</strong> ${analysisData.author || pageData.author || 'Unknown'}</p>
-                    </div>
-                    
-                    <div style="margin-bottom: 15px;">
-                        <h4>⚠️ Risk Assessment</h4>
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 14px;">
-                            <div>Bias: ${riskLevel(analysisData.bias_score || 0)}</div>
-                            <div>Manipulation: ${riskLevel(analysisData.manipulation_score || 0)}</div>
-                            <div>Commercial: ${riskLevel(analysisData.commercial_score || 0)}</div>
-                            <div>Credibility: ${riskLevel(analysisData.credibility_score || 0)}</div>
+                        
+                        <div class="section">
+                            <h3>⚠️ Risk Assessment</h3>
+                            <div class="risk-grid">
+                                <div class="risk-item">
+                                    <div class="score ${biasRisk.class}">${analysisData.bias_score || 0}</div>
+                                    <div class="label">Bias Risk</div>
+                                </div>
+                                <div class="risk-item">
+                                    <div class="score ${manipulationRisk.class}">${analysisData.manipulation_score || 0}</div>
+                                    <div class="label">Manipulation</div>
+                                </div>
+                                <div class="risk-item">
+                                    <div class="score ${commercialRisk.class}">${analysisData.commercial_score || 0}</div>
+                                    <div class="label">Commercial</div>
+                                </div>
+                                <div class="risk-item">
+                                    <div class="score ${credibilityRisk.class}">${analysisData.credibility_score || 0}</div>
+                                    <div class="label">Credibility</div>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                    
-                    ${analysisData.main_claims?.length > 0 ? `
-                        <div style="margin-bottom: 15px;">
-                            <h4>🔍 Key Claims</h4>
-                            <ul style="font-size: 14px;">
-                                ${analysisData.main_claims.map((claim: string) => `<li>${claim}</li>`).join('')}
-                            </ul>
+                        
+                        ${analysisData.main_claims?.length > 0 ? `
+                            <div class="section">
+                                <h3>🔍 Key Claims</h3>
+                                <div class="claims-list">
+                                    <h4>Main factual claims identified:</h4>
+                                    <ul>
+                                        ${analysisData.main_claims.map((claim) => `<li>${claim}</li>`).join('')}
+                                    </ul>
+                                </div>
+                            </div>
+                        ` : ''}
+                        
+                        ${analysisData.warning_signs?.length > 0 ? `
+                            <div class="section">
+                                <h3>🚨 Warning Signs</h3>
+                                <div class="warnings-list">
+                                    <h4>Potential red flags detected:</h4>
+                                    <ul>
+                                        ${analysisData.warning_signs.map((sign) => `<li>${sign}</li>`).join('')}
+                                    </ul>
+                                </div>
+                            </div>
+                        ` : ''}
+                        
+                        <div class="section">
+                            <h3>💡 Recommendation</h3>
+                            <div class="recommendation">
+                                <p>${analysisData.recommendation || 'Use critical thinking when reading this content'}</p>
+                            </div>
                         </div>
-                    ` : ''}
-                    
-                    ${analysisData.warning_signs?.length > 0 ? `
-                        <div style="margin-bottom: 15px;">
-                            <h4>🚨 Warning Signs</h4>
-                            <ul style="font-size: 14px;">
-                                ${analysisData.warning_signs.map((sign: string) => `<li>${sign}</li>`).join('')}
-                            </ul>
-                        </div>
-                    ` : ''}
-                    
-                    <div style="margin-bottom: 15px;">
-                        <h4>💡 Recommendation</h4>
-                        <p style="font-size: 14px;">${analysisData.recommendation || 'Use critical thinking when reading this content'}</p>
                     </div>
                 `;
 
-                console.log('Step 8 complete: Results displayed (simplified format)');
+                console.log('Step 8 complete: Results displayed (structured format)');
 
-            } catch (error: unknown) {
+            } catch (error) {
                 console.error('Error analyzing page:', error);
                 const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-                resultsDiv.innerHTML = `<p style="color: red;">Error: ${errorMessage}</p>`;
+                resultsDiv.innerHTML = `
+                    <div class="error">
+                        <h3>Error</h3>
+                        <p>${errorMessage}</p>
+                    </div>
+                `;
+            } finally {
+                // Reset button state
+                analyzeButton.disabled = false;
+                analyzeButton.textContent = 'Analyze Current Page';
             }
         });
     }
