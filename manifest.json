@@ -10,7 +10,7 @@
         "sidePanel"
     ],
     "action": {
-        "default_title": "Analyze page motives"
+        "default_title": "Spinguard"
     },
     "background": {
         "service_worker": "src/background.ts"

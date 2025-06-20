@@ -181,56 +181,30 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Display results
                 console.log('Step 8: Displaying results...');
 
+                // Helper function to extract and parse JSON from a string
+                function extractAndParseJson(text) {
+                    const match = text.match(/\{[\s\S]*\}/);
+                    if (match && match[0]) {
+                        try {
+                            return JSON.parse(match[0]);
+                        } catch (e) {
+                            console.error("Failed to parse extracted JSON:", e);
+                            throw new Error("AI returned malformed JSON. Please try again.");
+                        }
+                    }
+                    throw new Error("Could not find a JSON object in the AI's response.");
+                }
+
                 // Parse the response if it's a string (JSON)
                 let analysisData;
                 if (typeof llmResponse.data === 'string') {
-                    try {
-                        analysisData = JSON.parse(llmResponse.data);
-                    } catch {
-                        // If it's not JSON, treat it as the old format
-                        resultsDiv.innerHTML = `
-                            <div class="results">
-                                <h3>Analysis Results</h3>
-                                <div class="basic-info">
-                                    <div class="info-item">
-                                        <strong>URL</strong>
-                                        <span>${pageData.url}</span>
-                                    </div>
-                                    <div class="info-item">
-                                        <strong>Title</strong>
-                                        <span>${pageData.title}</span>
-                                    </div>
-                                    <div class="info-item">
-                                        <strong>Author</strong>
-                                        <span>${pageData.author || 'Unknown'}</span>
-                                    </div>
-                                    <div class="info-item">
-                                        <strong>Bias Score</strong>
-                                        <span>${pageData.biasScore}/100</span>
-                                    </div>
-                                </div>
-                                <div class="section">
-                                    <h3>🔗 Links Found</h3>
-                                    <p>${pageData.links.length} unique links detected</p>
-                                </div>
-                                <div class="section">
-                                    <h3>⚠️ Motive Indicators</h3>
-                                    ${pageData.motiveIndicators.length > 0
-                                ? `<ul>${pageData.motiveIndicators.map((indicator) => `<li>${indicator}</li>`).join('')}</ul>`
-                                : '<p>None detected</p>'
-                            }
-                                </div>
-                                <div class="section">
-                                    <h3>🤖 AI Analysis</h3>
-                                    <p>${llmResponse.data}</p>
-                                </div>
-                            </div>
-                        `;
-                        console.log('Step 8 complete: Results displayed (legacy format)');
-                        return;
-                    }
+                    analysisData = extractAndParseJson(llmResponse.data);
                 } else {
                     analysisData = llmResponse.data;
+                }
+
+                if (!analysisData) {
+                    throw new Error("Failed to get analysis data from the response.");
                 }
 
                 // Display structured results with improved layout
@@ -331,7 +305,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const errorMessage = error instanceof Error ? error.message : 'Unknown error';
                 resultsDiv.innerHTML = `
                     <div class="error">
-                        <h3>Error</h3>
+                        <h3><span style="font-size: 18px;">⚠️</span> Analysis Failed</h3>
                         <p>${errorMessage}</p>
                     </div>
                 `;

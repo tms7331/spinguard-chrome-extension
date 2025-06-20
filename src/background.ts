@@ -88,6 +88,11 @@ SCORING RUBRIC (0-100)
 
 End of prompt.`
 
+    // Cleanly log the data being sent to the LLM for debugging
+    console.groupCollapsed('📦 Spinguard: Data sent to LLM');
+    console.log('▶️ Page data received:', data);
+    console.groupEnd();
+
     const requestBody: OpenRouterRequest = {
         model: config.MODEL,
         messages: [{ role: 'system', content: system_prompt }, { role: 'user', content: prompt }],
