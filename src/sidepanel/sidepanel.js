@@ -218,7 +218,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const biasRisk = riskLevel(analysisData.bias_score || 0);
                 const manipulationRisk = riskLevel(analysisData.manipulation_score || 0);
                 const commercialRisk = riskLevel(analysisData.commercial_score || 0);
-                const credibilityRisk = riskLevel(analysisData.credibility_score || 0);
+                const accuracyRisk = riskLevel(analysisData.accuracy_risk || 0);
 
                 resultsDiv.innerHTML = `
                     <div class="results">
@@ -259,8 +259,8 @@ document.addEventListener('DOMContentLoaded', () => {
                                     <div class="label">Commercial</div>
                                 </div>
                                 <div class="risk-item">
-                                    <div class="score ${credibilityRisk.class}">${analysisData.credibility_score || 0}</div>
-                                    <div class="label">Credibility</div>
+                                    <div class="score ${accuracyRisk.class}">${analysisData.accuracy_risk || 0}</div>
+                                    <div class="label">Accuracy Risk</div>
                                 </div>
                             </div>
                         </div>

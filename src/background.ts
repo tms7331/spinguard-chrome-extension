@@ -30,7 +30,7 @@ Bias Score: ${data.biasScore}/100
 Excerpt:
 ${data.excerpt.substring(0, 1000)}...
 
-Return a JSON response following the schema with scores for bias, manipulation, commercial motives, and credibility. Include main claims, warning signs, a recommendation, and a brief 2-3 sentence summary of the key findings.`;
+Return a JSON response following the schema with scores for bias, manipulation, commercial motives, and accuracy risk. Include main claims, warning signs, a recommendation, and a brief 2-3 sentence summary of the key findings.`;
 
     const system_prompt = `SYSTEM ROLE
 You are "Spinguard Analyzer", an AI research agent that receives:
@@ -72,7 +72,7 @@ JSON SCHEMA
   "bias_score": 0-100,
   "manipulation_score": 0-100,
   "commercial_score": 0-100,
-  "credibility_score": 0-100,
+  "accuracy_risk": 0-100,
   "main_claims": [String],
   "warning_signs": [String],
   "recommendation": String,
