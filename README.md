@@ -2,7 +2,7 @@
 
 Spinguard is a Chrome extension that analyzes web pages for hidden agendas, bias, and commercial motives. It helps you identify manipulative content and make informed decisions about what you read online.
 
-![Spinguard Screenshot](https://i.imgur.com/example.png) <!-- Placeholder -->
+![Spinguard Screenshot](public/spinguard.png)
 
 ---
 
